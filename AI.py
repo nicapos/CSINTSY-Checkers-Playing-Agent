@@ -95,6 +95,7 @@ def find_piece_indexes(state:State, player:Player):
     indexes = [i for i in range(1, State.TILES+1) if match_piece( state.get_piece(i) )]
     return indexes
 
+
 def actions(state:State, player:Player) -> list:
     pieces = find_piece_indexes(state, player)
     possible_moves = []
@@ -106,6 +107,7 @@ def actions(state:State, player:Player) -> list:
         possible_moves = new_possible_moves
 
     return possible_moves
+
 
 def result(state:State, action:Move) -> State:
     resulting_state = deepcopy(state)
@@ -177,7 +179,70 @@ def minimax(node:GameTreeNode, depth:int, alpha:float, beta:float, isMaximizingP
         return min_v
 
 
+def quadrant(pos):
+	if pos <= 16:
+		return 2 if (pos-1)%4 <= 1 else 1
+	else:
+		return 3 if (pos-1)%4 <= 1 else 4
+
+def mergeSort(arr, custom_condition):
+    if len(arr) > 1:
+        mid = len(arr)//2
+  
+        H1 = arr[:mid]
+        H2 = arr[mid:]
+  
+        mergeSort(H1, custom_condition)
+        mergeSort(H2, custom_condition)
+  
+        i = j = k = 0
+  
+        while i < len(H1) and j < len(H2):
+            if custom_condition(H1[i], H2[j]):
+                arr[k] = H1[i]
+                i += 1
+            else:
+                arr[k] = H2[j]
+                j += 1
+            k += 1
+  
+        # Checking if any element was left
+        while i < len(H1):
+            arr[k] = H1[i]
+            i += 1
+            k += 1
+  
+        while j < len(H2):
+            arr[k] = H2[j]
+            j += 1
+            k += 1
+
+def heuristic_center(h1, h2):
+    col = lambda x: ((x - 1) % 4) + 1
+    side = lambda x : ((x - 1) // 4) % 2
+
+    # lower eval = closer to center
+    eval1 = [3, 2, 4, 1].index( col(h1.last_move.To) ) if side(h1.last_move.To) else [2, 3, 1, 4].index( col(h1.last_move.To) )
+    eval2 = [3, 2, 4, 1].index( col(h2.last_move.To) ) if side(h2.last_move.To) else [2, 3, 1, 4].index( col(h2.last_move.To) )
+
+    return eval1 > eval2
+
+def order_moves(candidates):
+    """
+    Try to keep your pieces on the back row or king row for as long as possible, to keep the other player from gaining a king.
+    """
+    heuristic_back = lambda h1, h2: h1.last_move.From > h2.last_move.From
+    mergeSort(candidates, custom_condition=heuristic_back) 
+
+    """
+    Control the center
+    """
+    mergeSort(candidates, custom_condition=heuristic_center) 
+
+
 def get_next_move(currentState:State) -> State:
+    APPLY_MOVE_ORDERING = True      # CUSTOM
+
     print("AI thinking of next move...")
     start_time = time()
 
@@ -194,8 +259,18 @@ def get_next_move(currentState:State) -> State:
         new_candidates = [c for c in best_next_candidates if c.last_move.nsteps == 2]
         best_next_candidates = new_candidates
 
-    # there can be more than 1 candidates. choose random
-    best_candidate = choice(best_next_candidates)
+    # there can be more than 1 candidates. apply move ordering or choose random
+    count_candidates = len(best_next_candidates)
+    if (count_candidates > 1):
+        if APPLY_MOVE_ORDERING:
+            order_moves(best_next_candidates)
+            best_candidate = best_next_candidates[0]
+        else:
+            best_candidate = choice(best_next_candidates)
+    elif (count_candidates == 1):
+        best_candidate = best_next_candidates[0]
+    else:
+        print("ERROR")
 
     end_time = time()
     time_elapsed = end_time - start_time

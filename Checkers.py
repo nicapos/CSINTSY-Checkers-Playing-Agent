@@ -1,4 +1,3 @@
-from operator import index
 import AI
 from GameElements import Player, Piece
 from GameTree import GameTreeNode
