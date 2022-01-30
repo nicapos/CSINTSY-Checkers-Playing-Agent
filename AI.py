@@ -5,7 +5,7 @@ from GameTree import GameTreeNode
 
 from copy import deepcopy
 from time import time
-from random import randint
+from random import randint, choice
 
 NEGATIVE_INFINITY = float('-inf')
 POSITIVE_INFINITY = float('inf')
@@ -16,6 +16,10 @@ move_decision_times = []
 def is_players_piece(piece:int, player:Player):
     return False if piece == None else piece > 0 if player == Player.AI else piece < 0
 
+def executed_by(move:Move, state:State): # returns the player executing the move passed in the parameters
+    # black pieces = AI, white pieces = HUMAN
+    return Player.AI if (state.get_piece(move.From) == Piece.BLACK.value or state.get_piece(move.From) == Piece.BLACK_KING.value) else Player.Human
+
 """
 ADDITIONAL FUNCTIONS
 """
@@ -23,6 +27,10 @@ ADDITIONAL FUNCTIONS
 def is_in_adjacent_rows(tile1, tile2):
 	row = lambda x: (x-1) // 4
 	return abs(row(tile1) - row(tile2)) == 1
+
+def rows_away(tile1, tile2):
+	row = lambda x: (x-1) // 4
+	return abs(row(tile1) - row(tile2))
 
 """
 HEURISTIC FUNCTIONS
@@ -42,42 +50,62 @@ END OF HEURISTIC FUNCTIONS
 def get_possible_moves(state:State, position:int, player:Player):
     side = lambda x : ((x - 1) // 4) % 2
 
+    edge_pieces = [4, 5, 12, 13, 20, 21, 28, 29]
+
+    if position in edge_pieces:
+        piece_diagonals = [-4, 4] # default values for King pieces
+
+        if (state.get_piece(position) == Piece.BLACK.value): # AI normal pieces
+            piece_diagonals = [4]
+        elif (state.get_piece(position) == Piece.WHITE.value): # human normal pieces
+            piece_diagonals = [-4]
+    else:
+        piece_diagonals = []
+
+        if (state.get_piece(position) == Piece.BLACK.value): # AI normal pieces
+            piece_diagonals = [3, 4] if side(position) else [4, 5]
+        elif (state.get_piece(position) == Piece.WHITE.value): # human normal pieces
+            piece_diagonals = [-5, -4] if side(position) else [-4, -3]
+        else:
+            piece_diagonals = [-5, -4, 3, 4] if side(position) else [-4, -3, 4, 5] # default values for King pieces
+
     possible_actions = []
-    piece_diagonals = [-5, -4, 3, 4] if side(position) else [-4, -3, 4, 5]
-
-    if (state.get_piece(position) == Piece.BLACK.value): # AI pieces
-        piece_diagonals = [3, 4] if side(position) else [4, 5]
-    elif (state.get_piece(position) == Piece.WHITE.value): # human pieces
-        piece_diagonals = [-5, -4] if side(position) else [-4, -3]
-
     for delta in piece_diagonals:
-        if is_in_adjacent_rows(position, position+delta):
-            m = Move(position, position+delta)
+        m = Move(position, position+delta)
 
-            if (m.isInBounds()):
+        if (m.isInBounds() and rows_away(m.From, m.To) == 1):
+            if ( not is_players_piece(state.get_piece(m.To), player) ):
                 if (state.get_piece(m.To) == 0):
                     possible_actions.append(m)
-                elif ( not is_players_piece(state.get_piece(m.To), player) ): # is opposing player's piece
-                    m.extend()
-                    if (m.isInBounds()):
-                        if (state.get_piece(m.To) == 0):
+
+                else:
+                    move_extended = m.extend()
+                    if (m.isInBounds() and move_extended):
+                        if (state.get_piece(m.To) == 0 and rows_away(m.From, m.To) == 2):
                             possible_actions.append(m)
 
-    #TODO: Sort moves for move ordering
-    
-    if any([a.type() == "SINGLE_JUMP_MOVE" for a in possible_actions]): # only return single jump moves if they're available
-        return [a for a in possible_actions if a.type() == "SINGLE_JUMP_MOVE"]
+    if any([a.nsteps == 2 for a in possible_actions]): # only return single jump moves if they're available
+        return [a for a in possible_actions if a.nsteps == 2]
     else:
         return possible_actions
 
+def find_piece_indexes(state:State, player:Player):
+    # black pieces = AI, white pieces = HUMAN
+    match_piece = lambda p: (p == Piece.BLACK.value or p == Piece.BLACK_KING.value) if player == Player.AI else (p == Piece.WHITE.value or p == Piece.WHITE_KING.value)
+    indexes = [i for i in range(1, State.TILES+1) if match_piece( state.get_piece(i) )]
+    return indexes
+
 def actions(state:State, player:Player) -> list:
-    possible_actions = []
+    pieces = find_piece_indexes(state, player)
+    possible_moves = []
+    for piece in pieces:
+        possible_moves += get_possible_moves(state, piece, player)
 
-    for i in range(1, state.TILES+1):
-        if ( state.get_piece(i) != 0 and is_players_piece(state.get_piece(i), player) ):
-            possible_actions.extend(get_possible_moves(state, i, player))
+    if any([m.nsteps == 2 for m in possible_moves]): # only keep jump moves if available
+        new_possible_moves = [m for m in possible_moves if m.nsteps == 2]
+        possible_moves = new_possible_moves
 
-    return possible_actions
+    return possible_moves
 
 def result(state:State, action:Move) -> State:
     resulting_state = deepcopy(state)
@@ -94,6 +122,7 @@ def result(state:State, action:Move) -> State:
         elif ( resulting_state.get_piece(action.To) == Piece.WHITE.value ):
             resulting_state.set_piece( action.To, Piece.WHITE_KING.value )
 
+    resulting_state.last_move = action
     return resulting_state
 
 def terminal_test(s:State) -> bool:
@@ -160,15 +189,22 @@ def get_next_move(currentState:State) -> State:
         if (child_node.heuristic == best_heuristic):
             best_next_candidates.append(child_node.state)
 
+    candidates_actions = [c.last_move for c in best_next_candidates]
+    if any([c.nsteps == 2 for c in candidates_actions]):
+        new_candidates = [c for c in best_next_candidates if c.last_move.nsteps == 2]
+        best_next_candidates = new_candidates
+
+    # there can be more than 1 candidates. choose random
+    best_candidate = choice(best_next_candidates)
+
     end_time = time()
     time_elapsed = end_time - start_time
     move_decision_times.append(time_elapsed)
+
+    print(f"Moved {best_candidate.last_move}.")
     print(f"{time_elapsed:.6f}s elapsed.\n")
     
-    # there can be more than 1 candidates. choose random
-    r = randint(0, len(best_next_candidates)-1)
-    return best_next_candidates[r]
+    return best_candidate
 
-def get_stats():
-    print("Average time elapsed in deciding next move:")
-    print(f"{sum(move_decision_times) / len(move_decision_times):.6f} seconds")
+def get_avg_decision_time():
+    return sum(move_decision_times) / len(move_decision_times)

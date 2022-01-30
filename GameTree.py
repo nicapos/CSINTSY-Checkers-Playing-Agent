@@ -3,13 +3,16 @@ from State import State
 NODES_GENERATED = 0
 
 class GameTreeNode():
+    NODES_GENERATED = 0
+
     def __init__(self, state:State, heuristic=None) -> None:
         self.__state = state
         self.__heuristic = heuristic
         self.__children = []
+        GameTreeNode.NODES_GENERATED += 1
 
-    def set_heuristic(self, val):
-        self.__heuristic = val
+    def set_heuristic(self, v):
+        self.__heuristic = v
 
     def add_child(self, otherGameTreeNode):
         self.__children.append(otherGameTreeNode)

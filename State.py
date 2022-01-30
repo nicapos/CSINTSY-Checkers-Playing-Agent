@@ -2,17 +2,19 @@ from GameElements import Piece
 
 class State:
     TILES = 32
+
     def __init__(self, preset_grid:list=None) -> None:
         # black pieces = AI, white pieces = HUMAN
         self.__tiles = [0 for _ in range(self.TILES)] if preset_grid == None else preset_grid
+        self.last_move = None
 
-    def get_piece(self, pos:int) -> int:
+    def get_piece(self, pos:int) -> int: # where pos = any int between 1 and 32 (inclusive)
         try:
             return self.__tiles[pos-1]
         except IndexError:
             raise Exception(f"Invalid index for get_piece. (Passed {pos})")
 
-    def set_piece(self, pos:int, value:int) -> bool:
+    def set_piece(self, pos:int, value:int): # where pos = any int between 1 and 32 (inclusive)
         try:
             self.__tiles[pos-1] = value
             return True
