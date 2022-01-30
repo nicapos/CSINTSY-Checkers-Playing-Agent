@@ -1,3 +1,4 @@
+from operator import index
 import AI
 from GameElements import Player, Piece
 from State import State
@@ -42,7 +43,6 @@ class CheckersGame:
             elif ( self.__game_state.get_piece(move.To) == Piece.WHITE.value ):
                 self.__game_state.set_piece( move.To, Piece.WHITE_KING.value )
 
-
         return self.__game_state
 
     def __switch_turn(self):
@@ -51,13 +51,21 @@ class CheckersGame:
         else:
             self.turn = Player.Human
 
+    def __find_piece_indexes(self, player:Player):
+        # black pieces = AI, white pieces = HUMAN
+        match_piece = Piece.BLACK.value if player == Player.AI else Piece.WHITE.value
+        indexes = [i for i in range(1, State.TILES+1) if self.__game_state.get_piece(i) == match_piece]
+        return indexes
+
     def __ask_human_input(self):
-        print(">> Select a piece to move...")
+        possible_srcs = [str(i) for i in self.__find_piece_indexes(Player.Human) if len(AI.get_possible_moves(self.__game_state, i, Player.Human)) > 0]
+        print(">> Select a piece to move. Movable pieces: " + ", ".join(possible_srcs))
+
         fromTile = int(input("    Enter tile: "))
 
         # get possible move destinations
         possible_dests = [str(m.To) for m in AI.get_possible_moves(self.__game_state, fromTile, Player.Human)]
-        print(f"\n>> Selected piece at  {fromTile}. Piece can move to: {','.join(possible_dests)}")
+        print(f"\n>> Selected piece at  {fromTile}. Piece can move to: {', '.join(possible_dests)}")
         toTile = int(input("    Enter tile: "))
 
         user_action = Move(fromTile, toTile)
