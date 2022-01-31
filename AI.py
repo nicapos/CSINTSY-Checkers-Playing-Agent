@@ -1,11 +1,11 @@
 from GameElements import Player, Piece
 from State import State
-from Move import Move, MoveType
+from Move import Move
 from GameTree import GameTreeNode
 
 from copy import deepcopy
 from time import time
-from random import randint, choice
+from random import choice
 
 NEGATIVE_INFINITY = float('-inf')
 POSITIVE_INFINITY = float('inf')
@@ -14,7 +14,10 @@ SEARCH_DEPTH = 8
 move_decision_times = []
 
 def is_players_piece(piece:int, player:Player):
-    return False if piece == None else piece > 0 if player == Player.AI else piece < 0
+    if player == Player.AI:
+        return piece in [Piece.BLACK.value, Piece.BLACK_KING.value]
+    else:
+        return piece in [Piece.WHITE.value, Piece.WHITE_KING.value]
 
 def executed_by(move:Move, state:State): # returns the player executing the move passed in the parameters
     # black pieces = AI, white pieces = HUMAN
@@ -109,7 +112,7 @@ def result(state:State, action:Move) -> State:
         elif ( resulting_state.get_piece(action.To) == Piece.WHITE.value ):
             resulting_state.set_piece( action.To, Piece.WHITE_KING.value )
 
-    resulting_state.last_move = action
+    resulting_state.action_applied = action
     return resulting_state
 
 def terminal_test(s:State) -> bool:
@@ -203,17 +206,16 @@ def heuristic_center(h1, h2):
     side = lambda x : ((x - 1) // 4) % 2
 
     # lower eval = closer to center
-    eval1 = [3, 2, 4, 1].index( col(h1.last_move.To) ) if side(h1.last_move.To) else [2, 3, 1, 4].index( col(h1.last_move.To) )
-    eval2 = [3, 2, 4, 1].index( col(h2.last_move.To) ) if side(h2.last_move.To) else [2, 3, 1, 4].index( col(h2.last_move.To) )
+    eval1 = [3, 2, 4, 1].index( col(h1.action_applied.To) ) if side(h1.action_applied.To) else [2, 3, 1, 4].index( col(h1.action_applied.To) )
+    eval2 = [3, 2, 4, 1].index( col(h2.action_applied.To) ) if side(h2.action_applied.To) else [2, 3, 1, 4].index( col(h2.action_applied.To) )
 
-    #return eval1 > eval2
-    return eval1 < eval2
+    return eval1 > eval2
 
 def order_moves(candidates):
     """
     Try to keep your pieces on the back row or king row for as long as possible, to keep the other player from gaining a king.
     """
-    heuristic_back = lambda h1, h2: h1.last_move.From > h2.last_move.From
+    heuristic_back = lambda h1, h2: h1.action_applied.From > h2.action_applied.From
     mergeSort(candidates, custom_condition=heuristic_back) 
 
     """
@@ -236,9 +238,9 @@ def get_next_move(currentState:State) -> State:
         if (child_node.heuristic == best_heuristic):
             best_next_candidates.append(child_node.state)
 
-    candidates_actions = [c.last_move for c in best_next_candidates]
+    candidates_actions = [c.action_applied for c in best_next_candidates]
     if any([c.nsteps == 2 for c in candidates_actions]):
-        new_candidates = [c for c in best_next_candidates if c.last_move.nsteps == 2]
+        new_candidates = [c for c in best_next_candidates if c.action_applied.nsteps == 2]
         best_next_candidates = new_candidates
 
     # there can be more than 1 candidates. apply move ordering or choose random
@@ -252,16 +254,16 @@ def get_next_move(currentState:State) -> State:
     elif (count_candidates == 1):
         best_candidate = best_next_candidates[-1]
     else:
-        print("ERROR")
+        raise Exception(f"Invalid amount of candidates (passed {count_candidates}).")
 
     end_time = time()
     time_elapsed = end_time - start_time
     move_decision_times.append(time_elapsed)
 
-    print(f"Moved {best_candidate.last_move}.")
+    print(f"Moved {best_candidate.action_applied}.")
     print(f"{time_elapsed:.6f}s elapsed.\n")
 
-    print(best_heuristic)
+    print(best_heuristic) # DEBUG
     
     return best_candidate
 

@@ -6,7 +6,7 @@ class Player(enum.Enum):
 
 class Piece(enum.Enum):
     # black pieces = AI, white pieces = HUMAN
-    BLACK = 1
-    BLACK_KING = 2
-    WHITE = -1
-    WHITE_KING = -2
+    BLACK = "b"
+    BLACK_KING = "B"
+    WHITE = "w"
+    WHITE_KING = "W"
