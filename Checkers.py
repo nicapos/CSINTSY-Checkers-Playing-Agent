@@ -86,9 +86,11 @@ class CheckersGame:
             fromTile = int(input("    Enter tile: "))
 
         # get possible move destinations
-        possible_dests = [str(m.To) for m in AI.get_possible_moves(self.__game_state, fromTile, Player.Human)]
-        print(f"\n>> Selected piece at {fromTile}. Piece can move to: {', '.join(possible_dests)}")
-        toTile = int(input("    Enter tile: "))
+        possible_dests = AI.get_possible_moves(self.__game_state, fromTile, Player.Human)
+        print(f"\n>> Selected piece at {fromTile}. Piece can move to: {', '.join([str(m.To) for m in possible_dests])}")
+        toTile = 0
+        while toTile not in possible_dests:
+            toTile = int(input("    Enter tile: "))
 
         user_action = Move(fromTile, toTile)
         print(f"\nMoved {user_action.nsteps} steps.\n")

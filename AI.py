@@ -9,7 +9,7 @@ from random import randint, choice
 
 NEGATIVE_INFINITY = float('-inf')
 POSITIVE_INFINITY = float('inf')
-SEARCH_DEPTH = 7
+SEARCH_DEPTH = 8
 
 move_decision_times = []
 
@@ -31,21 +31,6 @@ def is_in_adjacent_rows(tile1, tile2):
 def rows_away(tile1, tile2):
 	row = lambda x: (x-1) // 4
 	return abs(row(tile1) - row(tile2))
-
-"""
-HEURISTIC FUNCTIONS
-"""
-
-def eval_position_strength(state:State, r:int, c:int):
-    pass
-
-def eval_material_strength(state:State, player:Player):
-    pass
-
-"""
-END OF HEURISTIC FUNCTIONS
-"""
-
 
 def get_possible_moves(state:State, position:int, player:Player):
     side = lambda x : ((x - 1) // 4) % 2
@@ -133,11 +118,7 @@ def terminal_test(s:State) -> bool:
     return not bHaveRemainingPieces or not bHaveRemainingMoves
 
 def utility(s:State, p:Player) -> float:
-    # temporary
-    if p == Player.AI:
-        return s.normalBlackPieces - s.normalWhitePieces + (s.blackKingPieces * 0.5 - s.whiteKingPieces * 0.5)
-    else:
-        return s.normalWhitePieces - s.normalBlackPieces + (s.whiteKingPieces * 0.5 - s.blackKingPieces * 0.5)
+    return s.normalBlackPieces - s.normalWhitePieces + (s.blackKingPieces * 2 - s.whiteKingPieces * 2)
 
 def minimax(node:GameTreeNode, depth:int, alpha:float, beta:float, isMaximizingPlayer:bool) -> tuple: #-> tuple(float, Move):
     if depth == 0 or terminal_test(node.state):
@@ -225,7 +206,8 @@ def heuristic_center(h1, h2):
     eval1 = [3, 2, 4, 1].index( col(h1.last_move.To) ) if side(h1.last_move.To) else [2, 3, 1, 4].index( col(h1.last_move.To) )
     eval2 = [3, 2, 4, 1].index( col(h2.last_move.To) ) if side(h2.last_move.To) else [2, 3, 1, 4].index( col(h2.last_move.To) )
 
-    return eval1 > eval2
+    #return eval1 > eval2
+    return eval1 < eval2
 
 def order_moves(candidates):
     """
@@ -264,11 +246,11 @@ def get_next_move(currentState:State) -> State:
     if (count_candidates > 1):
         if APPLY_MOVE_ORDERING:
             order_moves(best_next_candidates)
-            best_candidate = best_next_candidates[0]
+            best_candidate = best_next_candidates[-1]
         else:
             best_candidate = choice(best_next_candidates)
     elif (count_candidates == 1):
-        best_candidate = best_next_candidates[0]
+        best_candidate = best_next_candidates[-1]
     else:
         print("ERROR")
 
@@ -278,6 +260,8 @@ def get_next_move(currentState:State) -> State:
 
     print(f"Moved {best_candidate.last_move}.")
     print(f"{time_elapsed:.6f}s elapsed.\n")
+
+    print(best_heuristic)
     
     return best_candidate
 
