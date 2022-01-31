@@ -133,22 +133,47 @@ def minimax(node:GameTreeNode, depth:int, alpha:float, beta:float, isMaximizingP
     if isMaximizingPlayer:
         max_v = NEGATIVE_INFINITY
 
-        for a in actions(node.state, Player.AI): # AI is the maximizing player
-            result_node = GameTreeNode(state=result(node.state,a))
-            node.add_child(result_node)
-            v = minimax(result_node, depth-1, alpha, beta, False)
-            result_node.set_heuristic(v)
+        # check if node already has children
+        if len(node.children) > 0:
+            for child_node in node.children:
+                v = minimax(child_node, depth-1, alpha, beta, False)
+                child_node.set_heuristic(v)
 
-            max_v = max(max_v, v)
-            alpha = max(alpha, v)
-            if beta <= alpha:
-                break
+                max_v = max(max_v, v)
+                alpha = max(alpha, v)
+                if beta <= alpha:
+                    break
+
+        # if not, generate children
+        else:
+            for a in actions(node.state, Player.AI): # AI is the maximizing player
+                result_node = GameTreeNode(state=result(node.state,a))
+                node.add_child(result_node)
+                v = minimax(result_node, depth-1, alpha, beta, False)
+                result_node.set_heuristic(v)
+
+                max_v = max(max_v, v)
+                alpha = max(alpha, v)
+                if beta <= alpha:
+                    break
 
         return max_v
 
     else:
         min_v = POSITIVE_INFINITY
 
+        # check if node already has children
+        if len(node.children) > 0:  
+            for child_node in node.children:
+                v = minimax(child_node, depth-1, alpha, beta, True)
+                child_node.set_heuristic(v)
+
+                min_v = min(min_v, v)
+                beta = min(beta, v)
+                if beta <= alpha:
+                    break
+
+        # if not, generate children
         for a in actions(node.state, Player.Human): # Human is the minimizing player
             result_node = GameTreeNode(state=result(node.state,a))
             node.add_child(result_node)
@@ -225,7 +250,7 @@ def order_moves(candidates):
 
 
 def get_next_move(currentState:State) -> State:
-    APPLY_MOVE_ORDERING = True      # CUSTOM
+    APPLY_MOVE_ORDERING = False      # CUSTOM
 
     print("AI thinking of next move...")
     start_time = time()

@@ -15,6 +15,14 @@ class GameTreeNode():
     def add_child(self, otherGameTreeNode):
         self.children.append(otherGameTreeNode)
 
+    def clear_heuristic(self):
+        self.heuristic = None
+
+    def clear_all_heuristic(self):
+        self.clear_heuristic()
+        for child in self.children():
+            child.clear_all_heuristic()
+
     @property
     def num_children(self):
         return len(self.children)
